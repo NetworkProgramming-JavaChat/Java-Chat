@@ -16,22 +16,25 @@ public class EmojiPanelUtil {
         // 배경색은 ChatPanel에서 설정
         emojiPanel.setVisible(false);
 
-        File profileDir = new File("images/profile");
-        File[] files = profileDir.listFiles((dir, name) -> name.startsWith("profile") && name.endsWith(".png"));
+        // "emoji-"로 시작하고 ".png"로 끝나는 파일만 읽어옵니다.
+        File emojiDir = new File("images");
+        File[] files = emojiDir.listFiles((dir, name) -> name.matches("emoji-\\d+\\.png"));
 
         if (files == null) {
             return emojiPanel;
         }
 
-        ArrayList<File> profileImages = new ArrayList<>();
+        // 파일 리스트 정렬 (숫자 순서대로)
+        ArrayList<File> emojiImages = new ArrayList<>();
         for (File f : files) {
-            profileImages.add(f);
+            emojiImages.add(f);
         }
-        profileImages.sort((f1, f2) -> f1.getName().compareTo(f2.getName()));
+        emojiImages.sort((f1, f2) -> f1.getName().compareTo(f2.getName()));
 
+        // 이모티콘 버튼 생성 및 추가
         int index = 0;
-        for (File imageFile : profileImages) {
-            ImageIcon icon = new ImageIcon(imageFile.getPath());
+        for (File emojiFile : emojiImages) {
+            ImageIcon icon = new ImageIcon(emojiFile.getPath());
             Image img = icon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
             icon = new ImageIcon(img);
 
@@ -40,16 +43,10 @@ public class EmojiPanelUtil {
             emojiButton.setContentAreaFilled(false);
             emojiButton.setBorderPainted(false);
 
-            // 파일명에서 숫자 추출
-            String fileName = imageFile.getName();
-            String numberStr = fileName.replaceAll("[^0-9]", "");
-
-            // 클릭 시 바로 이미지 전송
+            // 클릭 시 이모티콘 이미지 전송
             emojiButton.addActionListener(e -> {
-                String imagePath = "images/profile/profile" + numberStr + ".png";
-                // 바로 전송
+                String imagePath = "images/" + emojiFile.getName();
                 Sender.getSender().sendImage(imagePath);
-                // 패널을 다시 숨기기
                 emojiPanel.setVisible(false);
             });
 
