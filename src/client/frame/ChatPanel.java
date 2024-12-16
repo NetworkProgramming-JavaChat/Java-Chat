@@ -12,10 +12,9 @@ import javax.swing.text.html.HTMLDocument;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/*
- * 실제로 채팅이 이뤄지는 패널
- */
 public class ChatPanel extends JPanel {
 
 	JScrollPane chatScrollPane;
@@ -29,19 +28,33 @@ public class ChatPanel extends JPanel {
 	private StringBuffer chatLog = new StringBuffer();
 	private HTMLMaker htmlMaker = new HTMLMaker();
 
+	// 레이어드 팬 사용
+	private JLayeredPane layeredPane;
+
+	// 이모티콘 패널 관련
+	private JPanel emojiPanel; // 이모티콘 패널
+	private boolean isEmojiPanelVisible = false;
+
 	public ChatPanel() {
 		setLayout(null);
+		setBackground(Color.WHITE);
+		setBounds(0,0,300,600);
+
+		layeredPane = new JLayeredPane();
+		layeredPane.setLayout(null);
+		layeredPane.setBounds(0,0,300,600);
+		add(layeredPane);
 
 		chatTextPane = new JTextPane();
-		chatTextPane.setFont(FontManager.getCustomFont(15f)); // 폰트 적용
+		chatTextPane.setFont(FontManager.getCustomFont(15f));
 		txtrMessage = new JTextArea();
-		txtrMessage.setFont(FontManager.getCustomFont(15f)); // 폰트 적용
+		txtrMessage.setFont(FontManager.getCustomFont(15f));
 
 		JPanel chatBoardPane = new JPanel();
 		chatBoardPane.setBackground(Color.decode("#8CABD8"));
 		chatBoardPane.setBounds(0, 0, 300, 440);
-		add(chatBoardPane);
 		chatBoardPane.setLayout(null);
+		layeredPane.add(chatBoardPane, JLayeredPane.DEFAULT_LAYER);
 
 		chatScrollPane = new JScrollPane();
 		chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -51,6 +64,8 @@ public class ChatPanel extends JPanel {
 		chatTextPane.setBackground(Color.decode("#8CABD8"));
 		chatScrollPane.setViewportView(chatTextPane);
 		chatTextPane.setText("");
+		chatTextPane.setContentType("text/html");
+		doc = (HTMLDocument) chatTextPane.getStyledDocument();
 
 		userList = new JList(userListModel);
 		userList.addMouseListener(new MouseAdapter() {
@@ -62,7 +77,7 @@ public class ChatPanel extends JPanel {
 			}
 		});
 		userList.setBackground(Color.WHITE);
-		userList.setFont(FontManager.getCustomFont(15f)); // 폰트 적용
+		userList.setFont(FontManager.getCustomFont(15f));
 		chatScrollPane.setColumnHeaderView(userList);
 		userList.setVisible(false);
 		userList.setVisibleRowCount(0);
@@ -71,7 +86,6 @@ public class ChatPanel extends JPanel {
 		ImageIcon userListIcon = new ImageIcon("images/userlist-bar.png");
 		Image scaledUserListImage = userListIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
 		JLabel lblUserList = new JLabel(new ImageIcon(scaledUserListImage));
-
 		lblUserList.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent arg0) {
@@ -82,12 +96,9 @@ public class ChatPanel extends JPanel {
 		lblUserList.setBounds(12, 0, 40, 40);
 		chatBoardPane.add(lblUserList);
 
-		chatTextPane.setContentType("text/html");
-		doc = (HTMLDocument) chatTextPane.getStyledDocument();
-
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setBounds(10, 450, 189, 70);
-		add(scrollPane);
+		layeredPane.add(scrollPane, JLayeredPane.DEFAULT_LAYER);
 
 		txtrMessage.addKeyListener(new KeyAdapter() {
 			@Override
@@ -102,7 +113,7 @@ public class ChatPanel extends JPanel {
 		scrollPane.setViewportView(txtrMessage);
 
 		JButton btnNewButton = new JButton("전송");
-		btnNewButton.setFont(FontManager.getCustomFont(15f)); // 폰트 적용
+		btnNewButton.setFont(FontManager.getCustomFont(15f));
 		btnNewButton.setBackground(Color.decode("#8CABD8"));
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -110,7 +121,7 @@ public class ChatPanel extends JPanel {
 			}
 		});
 		btnNewButton.setBounds(211, 450, 65, 35);
-		add(btnNewButton);
+		layeredPane.add(btnNewButton, JLayeredPane.DEFAULT_LAYER);
 
 		JLabel lblImage = new JLabel();
 		ImageIcon originalIcon = new ImageIcon("images/image.png");
@@ -123,7 +134,32 @@ public class ChatPanel extends JPanel {
 			}
 		});
 		lblImage.setBounds(211, 490, 30, 30);
-		add(lblImage);
+		layeredPane.add(lblImage, JLayeredPane.DEFAULT_LAYER);
+
+		ImageIcon emoticonIcon = new ImageIcon("images/emoticon.png");
+		Image scaledEmoticonImage = emoticonIcon.getImage().getScaledInstance(25, 25, Image.SCALE_SMOOTH);
+		JLabel lblImoticon = new JLabel(new ImageIcon(scaledEmoticonImage));
+		lblImoticon.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				toggleEmojiPanel();
+			}
+		});
+		lblImoticon.setBounds(246, 490, 30, 30);
+		layeredPane.add(lblImoticon, JLayeredPane.DEFAULT_LAYER);
+
+		// 이모티콘 패널 초기화
+		emojiPanel = EmojiPanelUtil.createEmojiPanel(this);
+		// 매개변수를 txtrMessage 대신 ChatPanel 자신을 넘겨서 EmojiPanelUtil이 이미지 전송 시 ChatPanel 메서드 호출 가능
+		emojiPanel.setBounds(0, 390, 300, 60);
+		emojiPanel.setBackground(new Color(255,255,255,180)); // 흰색 반투명
+		emojiPanel.setOpaque(true);
+		layeredPane.add(emojiPanel, JLayeredPane.PALETTE_LAYER);
+	}
+
+	private void toggleEmojiPanel() {
+		isEmojiPanelVisible = !isEmojiPanelVisible;
+		emojiPanel.setVisible(isEmojiPanelVisible);
 	}
 
 	private void setWhisperCommand(String whisperTarget) {
@@ -166,9 +202,19 @@ public class ChatPanel extends JPanel {
 		return e.getKeyCode() == KeyEvent.VK_ENTER;
 	}
 
-	private void pressEnter(String userMessage) {
+	public void pressEnter(String userMessage) {
 		if (isNullString(userMessage)) {
 			return;
+		}
+		// 기존 로직 그대로 유지
+		Pattern pattern = Pattern.compile(":profile(\\d+):");
+		Matcher matcher = pattern.matcher(userMessage.trim());
+
+		if (matcher.matches()) {
+			// 이모티콘 이미지 전송
+			String index = matcher.group(1);
+			String imagePath = "images/profile/profile" + index + ".png";
+			Sender.getSender().sendImage(imagePath);
 		} else if (isWhisper(userMessage)) {
 			sendWhisper(userMessage);
 		} else if (isSearch(userMessage)) {
@@ -176,6 +222,7 @@ public class ChatPanel extends JPanel {
 		} else {
 			sendMessage(userMessage);
 		}
+
 		txtrMessage.setText("");
 		txtrMessage.setCaretPosition(0);
 	}
